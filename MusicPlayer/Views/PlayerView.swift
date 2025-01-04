@@ -58,11 +58,16 @@ struct PlayerView: View {
             .autoconnect()
             .sink { [weak player] _ in
                 guard let player = player else { return }
+
+                // Update slider position if not dragging
                 if !isDraggingSlider {
-                    sliderPosition = player.currentTime
+                    withAnimation {
+                        sliderPosition = player.currentTime
+                    }
                 }
             }
     }
+
     
     // MARK: - Components
     private var backgroundGradient: some View {
@@ -80,10 +85,9 @@ struct PlayerView: View {
             in: 0...(Double(player.currentSong?.duration ?? 1)),
             onEditingChanged: { editing in
                 isDraggingSlider = editing
+                
                 if !editing {
                     player.seek(to: sliderPosition)
-                    // Restart the timer after seeking
-                    startTimer()
                 }
             }
         )
@@ -164,7 +168,6 @@ struct PlayerView: View {
         HStack(spacing: 40) {
             playbackButton(systemName: "backward.fill") {
                 player.prevTrack()
-                sliderPosition = 0 // Reset slider position immediately
             }
             
             playbackButton(systemName: player.isPlaying ? "pause.circle.fill" : "play.circle.fill", size: 65) {
@@ -174,7 +177,6 @@ struct PlayerView: View {
             
             playbackButton(systemName: "forward.fill") {
                 player.nextTrack()
-                sliderPosition = 0 // Reset slider position immediately
             }
         }
         .foregroundColor(.white)

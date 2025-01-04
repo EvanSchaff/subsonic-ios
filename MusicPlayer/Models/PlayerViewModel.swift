@@ -5,13 +5,6 @@
 //  Created by Evan Schaff on 12/22/24.
 //
 
-//
-//  PlayerViewModel.swift
-//  MusicPlayer
-//
-//  Created by Evan Schaff on 12/22/24.
-//
-
 import SwiftUI
 import Foundation
 import AVFoundation
@@ -189,23 +182,30 @@ class PlayerViewModel: ObservableObject {
     }
 
     private func setupTimeObserver() {
-        // Remove any existing time observer
-        if let observer = timeObserver {
-            currentPlayer?.removeTimeObserver(observer)
+        // Remove any existing time observer if the player is not nil
+        if let observer = timeObserver, let player = currentPlayer {
+            player.removeTimeObserver(observer)
             timeObserver = nil
         }
-        
+
         // Create a new time observer
-        timeObserver = currentPlayer?.addPeriodicTimeObserver(
-            forInterval: CMTime(seconds: 1, preferredTimescale: 600), // Update every second
-            queue: .main
-        ) { [weak self] time in
-            guard let self = self else { return }
-            self.currentTime = time.seconds
-            self.updateNowPlayingInfo() // Update now playing info with current time
-            self.checkForSongCompletion()
+        if let player = currentPlayer {
+            timeObserver = player.addPeriodicTimeObserver(
+                forInterval: CMTime(seconds: 1, preferredTimescale: 600), // Update every second
+                queue: .main
+            ) { [weak self] time in
+                guard let self = self else { return }
+                self.currentTime = time.seconds
+                
+                // Log the current time
+                print("Current Time: \(self.currentTime) seconds")
+                
+                self.updateNowPlayingInfo() // Update now playing info with current time
+                self.checkForSongCompletion()
+            }
         }
     }
+
     
     func loadPlaylist(playlist: Playlist) {
         currentPlaylist = playlist
@@ -215,31 +215,31 @@ class PlayerViewModel: ObservableObject {
     }
     
     func playCurrentSong(song: Song) async throws {
-        func playCurrentSong(song: Song) async throws {
+        await MainActor.run {
+            currentPlayer?.pause()
+            isPlaying = false
+            isLoading = true
+        }
+        
+        // Check if we have a preloaded player for this index
+        if let playlist = currentPlaylist,
+           let preloadedPlayer = preloadedPlayers[playlist.currentIndex] {
             await MainActor.run {
-                currentPlayer?.pause()
-                isPlaying = false
-                isLoading = true
+                currentPlayer = preloadedPlayer
+                preloadedPlayers.removeValue(forKey: playlist.currentIndex)
+                setupTimeObserver()
+                currentPlayer?.play()
+                isPlaying = true
+                isLoading = false
+                objectWillChange.send()
+                updateNowPlayingInfo()
             }
             
-            // Check if we have a preloaded player for this index
-            if let playlist = currentPlaylist,
-               let preloadedPlayer = preloadedPlayers[playlist.currentIndex] {
-                await MainActor.run {
-                    currentPlayer = preloadedPlayer
-                    preloadedPlayers.removeValue(forKey: playlist.currentIndex)
-                    currentPlayer?.play()
-                    isPlaying = true
-                    isLoading = false
-                    objectWillChange.send()
-                    updateNowPlayingInfo()
-                }
-                
-                // Start preloading next tracks
-                preloadUpcomingTracks()
-                return
-            }
+            // Start preloading next tracks
+            preloadUpcomingTracks()
+            return
         }
+
         guard let streamURL = subsonicClient.getStreamURL(for: song) else {
             throw SubsonicError.invalidURL
         }
@@ -279,51 +279,52 @@ class PlayerViewModel: ObservableObject {
             updateNowPlayingInfo() // Update lock screen info
         }
     }
-    
+
     private struct StreamCapabilities {
-            var supportsRanges: Bool
-            var contentLength: String?
-            var contentType: String?
+        var supportsRanges: Bool
+        var contentLength: String?
+        var contentType: String?
+    }
+
+    private func checkStreamCapabilities(url: URL) async throws -> (StreamCapabilities, [String: String]) {
+        var request = URLRequest(url: url)
+        // Request a byte range to check support
+        request.setValue("bytes=0-1", forHTTPHeaderField: "Range")
+        
+        let (_, response) = try await URLSession.shared.data(for: request)
+        var diagnostics: [String: String] = [:]
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            diagnostics["error"] = "Not an HTTP response"
+            return (StreamCapabilities(supportsRanges: false), diagnostics)
         }
         
-        private func checkStreamCapabilities(url: URL) async throws -> (StreamCapabilities, [String: String]) {
-            var request = URLRequest(url: url)
-            // Request a byte range to check support
-            request.setValue("bytes=0-1", forHTTPHeaderField: "Range")
-            
-            let (_, response) = try await URLSession.shared.data(for: request)
-            var diagnostics: [String: String] = [:]
-            
-            guard let httpResponse = response as? HTTPURLResponse else {
-                diagnostics["error"] = "Not an HTTP response"
-                return (StreamCapabilities(supportsRanges: false), diagnostics)
-            }
-            
-            // Collect diagnostic information
-            diagnostics["status_code"] = String(httpResponse.statusCode)
-            diagnostics["headers"] = httpResponse.allHeaderFields.description
-            
-            let supportsRanges = httpResponse.allHeaderFields["Accept-Ranges"] as? String == "bytes"
-            let contentLength = httpResponse.allHeaderFields["Content-Length"] as? String
-            let contentType = httpResponse.allHeaderFields["Content-Type"] as? String
-            
-            diagnostics["supports_ranges"] = String(supportsRanges)
-            diagnostics["content_length"] = contentLength
-            diagnostics["content_type"] = contentType
-            
-            // If the server supports ranges, it should respond with 206 Partial Content
-            if httpResponse.statusCode == 206 {
-                diagnostics["range_response"] = "Server correctly responded to range request"
-            } else {
-                diagnostics["range_response"] = "Server did not properly handle range request"
-            }
-            
-            return (StreamCapabilities(
-                supportsRanges: supportsRanges,
-                contentLength: contentLength,
-                contentType: contentType
-            ), diagnostics)
+        // Collect diagnostic information
+        diagnostics["status_code"] = String(httpResponse.statusCode)
+        diagnostics["headers"] = httpResponse.allHeaderFields.description
+        
+        let supportsRanges = httpResponse.allHeaderFields["Accept-Ranges"] as? String == "bytes"
+        let contentLength = httpResponse.allHeaderFields["Content-Length"] as? String
+        let contentType = httpResponse.allHeaderFields["Content-Type"] as? String
+        
+        diagnostics["supports_ranges"] = String(supportsRanges)
+        diagnostics["content_length"] = contentLength ?? "unknown"
+        diagnostics["content_type"] = contentType ?? "unknown"
+        
+        // If the server supports ranges, it should respond with 206 Partial Content
+        if httpResponse.statusCode == 206 {
+            diagnostics["range_response"] = "Server correctly responded to range request"
+        } else {
+            diagnostics["range_response"] = "Server did not properly handle range request"
         }
+        
+        return (StreamCapabilities(
+            supportsRanges: supportsRanges,
+            contentLength: contentLength,
+            contentType: contentType
+        ), diagnostics)
+    }
+
 
 
     
@@ -347,88 +348,67 @@ class PlayerViewModel: ObservableObject {
     
 
     func seek(to timeInSeconds: Double) {
-        guard let player = currentPlayer else {
-            print("Player is not initialized.")
-            return
-        }
-        
-        // If we know this song doesn't support ranges, log it
-        if !currentSongHasRangeSupport {
-            print("Warning: Current song does not support byte ranges. Seeking may be unreliable.")
-            print("Diagnostics: \(streamingDiagnostics)")
-        }
+        guard let player = currentPlayer else { return }
         
         // Continue with seek operation...
         let time = CMTime(seconds: timeInSeconds, preferredTimescale: 600)
         player.seek(to: time) { [weak self] finished in
             if finished {
                 self?.currentTime = timeInSeconds
-            } else {
-                print("Seek failed. Stream diagnostics: \(self?.streamingDiagnostics ?? [:])")
             }
         }
     }
+
     func nextTrack() {
-        // Prevent multiple simultaneous calls
-        guard !isChangingTrack else {
-            print("nextTrack: Track change already in progress, ignoring call.")
-            return
-        }
+        guard !isChangingTrack else { return }
         
         isChangingTrack = true  // Set the flag
         
         guard let playlist = currentPlaylist else {
-            print("nextTrack: No current playlist available.")
-            isChangingTrack = false  // Reset the flag
+            isChangingTrack = false
             return
         }
         
-        print("nextTrack: Starting with current index \(playlist.currentIndex), current song \(currentSong?.name ?? "none").")
-        
         // Pause the current player before changing tracks
-        if let player = currentPlayer {
-            player.pause()
-            print("nextTrack: Paused current player.")
-        }
-        
-        // Calculate the next index before updating anything
+        currentPlayer?.pause()
+
+        // Calculate the next index
         let nextIndex: Int
         if shuffleEnabled {
             nextIndex = getNextShuffledIndex()
-            print("nextTrack: Shuffle is enabled. Next shuffled index: \(nextIndex).")
         } else {
             let proposedIndex = playlist.currentIndex + 1
             nextIndex = proposedIndex >= playlist.songs.count
                 ? (repeatMode == .all ? 0 : playlist.songs.count - 1)
                 : proposedIndex
-            print("nextTrack: Shuffle is disabled. Calculated next index: \(nextIndex).")
         }
         
         // Only proceed if we have a valid index
-        if nextIndex >= playlist.songs.count {
-            print("nextTrack: Next index \(nextIndex) is out of bounds.")
+        guard nextIndex < playlist.songs.count else {
+            isChangingTrack = false
             return
         }
         
         // Update the current index and song atomically
         currentPlaylist?.currentIndex = nextIndex
         currentSong = playlist.songs[nextIndex]
-        print("nextTrack: Updated to next index \(nextIndex), song \(currentSong?.name ?? "unknown").")
+        currentTime = 0
         
+        // Ensure we stop any previous observers properly before creating a new one
+        timeObserver = nil
+
         // Play the new song
         Task {
             do {
                 try await playCurrentSong(song: playlist.songs[nextIndex])
                 preloadUpcomingTracks()  // Preload after changing tracks
-                isChangingTrack = false
             } catch {
-                print("nextTrack: Error playing song: \(error.localizedDescription).")
-                isChangingTrack = false
+                // Handle error silently
             }
+            isChangingTrack = false
         }
     }
 
-    
     func prevTrack() {
         guard let playlist = currentPlaylist else { return }
         
@@ -437,6 +417,7 @@ class PlayerViewModel: ObservableObject {
         
         if currentTime > 3 {
             seek(to: 0)
+            currentPlayer?.play()
             return
         }
         
@@ -521,27 +502,16 @@ class PlayerViewModel: ObservableObject {
     
     private func checkForSongCompletion() {
         // Don't check for completion if we're already changing tracks
-        guard !isChangingTrack else {
-            print("checkForSongCompletion: Track change in progress, skipping check.")
-            return
-        }
+        guard !isChangingTrack else { return }
         
-        guard let player = currentPlayer else {
-            print("checkForSongCompletion: No current player available.")
-            return
-        }
+        guard let player = currentPlayer else { return }
         
-        guard let duration = player.currentItem?.duration.seconds, !duration.isNaN else {
-            print("checkForSongCompletion: Invalid duration or player item.")
-            return
-        }
-
+        guard let duration = player.currentItem?.duration.seconds, !duration.isNaN else { return }
+        
         let currentTime = player.currentTime().seconds
         
         // Check if the song has completed (allowing for a small buffer of 0.5 seconds)
         if currentTime >= duration - 0.5 {
-            print("checkForSongCompletion: Song is nearing completion (current time: \(currentTime), duration: \(duration)).")
-            
             switch repeatMode {
             case .none, .all:
                 nextTrack()
@@ -551,4 +521,5 @@ class PlayerViewModel: ObservableObject {
             }
         }
     }
+
 }
