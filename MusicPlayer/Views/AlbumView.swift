@@ -9,7 +9,7 @@ import SwiftUI
 
 struct AlbumView: View {
     let album: Album
-    @Environment(\.dismiss) var dismiss  // Dismiss environment variable
+    @Environment(\.dismiss) var dismiss
     @StateObject private var viewModel: AlbumViewModel
     
     
@@ -28,7 +28,7 @@ struct AlbumView: View {
                 }) {
                     Image(systemName: "arrow.left")
                         .font(.title2)
-                        .foregroundColor(.primary)  // Changed from .black to .primary
+                        .foregroundColor(.primary)
                 }
                 Spacer()
                 
@@ -38,12 +38,10 @@ struct AlbumView: View {
                 }) {
                     Image(systemName: "ellipsis")
                         .font(.title2)
-                        .foregroundColor(.primary)  // Changed from .black to .primary
+                        .foregroundColor(.primary)
                         .rotationEffect(.degrees(90))
                 }
             }
-            .padding(.horizontal)
-            .padding(.vertical, 10)
             .padding(.horizontal)
             .padding(.vertical, 10)
             

@@ -28,8 +28,10 @@
 				ContentView.swift,
 				MainView.swift,
 				PlayerView.swift,
-				SearchView.swift,
-				SettingsView.swift,
+				SearchView/SearchSection.swift,
+				SearchView/SearchView.swift,
+				SettingsView/ConnectionsView.swift,
+				SettingsView/SettingsView.swift,
 			);
 			target = 61D0DE572D11F5DE00EBCE9E /* MusicPlayer */;
 		};
@@ -58,6 +60,7 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				AlbumViewModel.swift,
+				AllAlbumsModel.swift,
 				MainViewModel.swift,
 				PlayerViewModel.swift,
 				SearchViewModel.swift,

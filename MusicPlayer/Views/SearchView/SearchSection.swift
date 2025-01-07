@@ -1,20 +1,22 @@
 //
-//  SearchView.swift
+//  SearchSection.swift
 //  MusicPlayer
 //
-//  Created by Evan Schaff on 12/17/24.
+//  Created by Evan Schaff on 1/7/25.
 //
 
 import SwiftUI
 
-struct SearchView: View {
+struct SearchSection: View {
     @StateObject private var searchViewModel = SearchViewModel()
     @State private var searchText = ""
-    @ObservedObject var player = PlayerViewModel.shared 
-
+    @FocusState private var isSearchFocused: Bool
+    @ObservedObject var player = PlayerViewModel.shared
+    @Environment(\.dismiss) var dismiss
+    
     var body: some View {
-        VStack(spacing: 16) {
-            searchBar()
+        VStack(spacing: 0) {
+            header()
             ScrollView(showsIndicators: false) {
                 if !searchViewModel.albums.isEmpty {
                     sectionWithHorizontalScroll(title: "Albums", items: searchViewModel.albums)
@@ -22,25 +24,48 @@ struct SearchView: View {
                 if !searchViewModel.songs.isEmpty {
                     sectionWithVerticalList(title: "Songs", items: searchViewModel.songs)
                 }
-                Spacer() 
-                .padding(.bottom, 100) //
+                Spacer()
+                    .padding(.bottom, 100)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 16)
+        .navigationBarBackButtonHidden(true)
+        .navigationBarItems(leading: EmptyView())
+        .onAppear() {
+            isSearchFocused = true
+        }
+    }
+    
+    private func header() -> some View {
+        return HStack {
+            Button(action: {
+                dismiss()
+            }) {
+                Image(systemName: "arrow.left")
+                    .font(.title2)
+                    .foregroundColor(.primary)
+            }
+            Spacer()
+            searchBar()
+            
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 10)
     }
     
     private func searchBar() -> some View {
         return HStack {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.gray)
-
+            
             TextField("Search...", text: $searchText)
+                .autocorrectionDisabled()
+                .submitLabel(.search)
                 .padding(.vertical, 10)
+                .focused($isSearchFocused)
                 .onChange(of: searchText) { _, newValue in
                     searchViewModel.search(query: newValue)
                 }
-    
+            
             if searchViewModel.isSearching {
                 ProgressView()
                     .padding(.trailing, 8)
@@ -187,6 +212,3 @@ struct SearchView: View {
         }
     }
 }
-
-
-
