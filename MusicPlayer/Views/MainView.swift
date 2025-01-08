@@ -74,12 +74,8 @@ struct MainView: View {
                                         .cornerRadius(10)
                                         .shadow(radius: 3)
                                 } else {
-                                    Image("test_album")
-                                        .resizable()
-                                        .scaledToFill()
+                                    ProgressView()
                                         .frame(width: 120, height: 120)
-                                        .cornerRadius(10)
-                                        .shadow(radius: 3)
                                 }
                                 
                                 Text(album.name)

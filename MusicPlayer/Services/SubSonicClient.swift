@@ -78,6 +78,7 @@ class SubsonicClient {
             throw SubsonicError.fetchingDataFailed
         }
     }
+
     
     func fetchAlbumArt(for albums: [Album]) async -> [Album] {
         var updatedAlbums = albums

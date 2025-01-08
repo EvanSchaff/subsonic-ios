@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct Album {  // Removed Codable
+struct Album {
     let id: String
     let name: String
     let artist: String

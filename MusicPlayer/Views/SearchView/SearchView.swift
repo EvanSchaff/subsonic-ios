@@ -8,9 +8,12 @@
 import SwiftUI
 
 struct SearchView: View {
+    @StateObject private var albumsView = AllAlbumsModel()
+    
     var body: some View {
         VStack(spacing: 16) {
             staticSearchBar()
+            albumScrollView(items: albumsView.albums)
         }
         .padding(.horizontal, 16)
         .padding(.top, 16)
@@ -33,11 +36,37 @@ struct SearchView: View {
         }
     }
     
-    private func albumScrollView() -> some View {
-        return ScrollView() {
-            VStack(spacing: 10) {
+    private func albumScrollView(items: [Album]) -> some View {
+        
+        let columns = [
+            GridItem(.flexible()),
+            GridItem(.flexible()),
+            GridItem(.flexible())
+        ]
+        
+        return ScrollView {
+            LazyVGrid(columns: columns, spacing: 16) {
+                ForEach(items, id: \.id) { album in
+                    VStack {
+                        if let albumArt = album.image {
+                            Image(uiImage: albumArt)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 120, height: 120)
+                        } else {
+                            ProgressView()
+                                .frame(width: 120, height: 120)
+                        }
+                    }
+                    .onAppear {
+                        if album.image == nil {
+                            albumsView.loadAlbumArt(album: [album])
+                        }
+                    }
+                }
                 
             }
+            
         }
     }
     
