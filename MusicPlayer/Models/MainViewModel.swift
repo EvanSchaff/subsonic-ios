@@ -8,6 +8,7 @@ import Foundation
 
 class MusicViewModel: ObservableObject {
     @Published var recentAlbums: [Album] = []
+    @Published var newestAlbums: [Album] = []
     @Published var frequentAlbums: [Album] = []
     @Published var randomAlbums: [Album] = []
     
@@ -33,11 +34,18 @@ class MusicViewModel: ObservableObject {
             
             Task {
                 do {
-                    let recentlyFetchedAlbums = try await subsonicClient.getAlbums(type: .newest, size: 10)
+                    let recentlyFetchedAlbums = try await subsonicClient.getAlbums(type: .recent, size: 10)
                     let recentlyUpdatedAlbums = await subsonicClient.fetchAlbumArt(for: recentlyFetchedAlbums)
                     
                     await MainActor.run {
                         self.recentAlbums = recentlyUpdatedAlbums
+                    }
+                    
+                    let newestFetchedAlbums = try await subsonicClient.getAlbums(type: .newest, size: 10)
+                    let newestUpdatedAlbums = await subsonicClient.fetchAlbumArt(for: newestFetchedAlbums)
+                    
+                    await MainActor.run {
+                        self.newestAlbums = newestUpdatedAlbums
                     }
                 
                     let frequentFetchedAlbums = try await subsonicClient.getAlbums(type: .frequent, size: 10)
@@ -60,16 +68,4 @@ class MusicViewModel: ObservableObject {
                 }
             }
         }
-    
-
-    func loadSongs() {
-//        Task {
-//            do {
-//                //let recentlyFetchedSongs = try await subsonicClient.getRecentlyPlayedSongs()
-//            } catch {
-//                print("Failed to load songs: \(error.localizedDescription)")
-//                print("Error details: \(error)")
-//            }
-//        }
-    }
 }

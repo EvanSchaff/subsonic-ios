@@ -23,17 +23,18 @@ struct MainView: View {
     var body: some View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 20) {
+                    
                     // Recently Added Section
                     sectionWithHorizontalScroll(
-                        title: "Recently Added",
+                        title: "Recently Played",
                         items: musicViewModel.recentAlbums
                     )
                     
-//                    // Recently Played Section
-//                    sectionWithVerticalList(
-//                        title: "Recently Played",
-//                        songs: songs
-//                    )
+                    // Newly Added Section
+                    sectionWithHorizontalScroll(
+                        title: "Newly Added",
+                        items: musicViewModel.newestAlbums
+                    )
                     
                     // Frequently Played Section
                     sectionWithHorizontalScroll(
