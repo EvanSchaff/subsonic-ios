@@ -54,7 +54,6 @@ struct SearchView: View {
                                            .resizable()
                                            .aspectRatio(contentMode: .fit)
                                    } else {
-                                       // Placeholder with same dimensions
                                        Rectangle()
                                            .foregroundColor(.gray.opacity(0.2))
                                            .aspectRatio(1, contentMode: .fit)

@@ -95,8 +95,8 @@ class SubsonicClient {
                     group.addTask {
                         guard let url = self.buildURL(path: "getCoverArt", additionalParams: [
                             "id": album.id,
-                            "width": "120",
-                            "height": "120"
+                            "width": "300",
+                            "height": "300"
                         ]) else {
                             return (index, nil)
                         }
@@ -134,8 +134,8 @@ class SubsonicClient {
         
         guard let url = self.buildURL(path: "getCoverArt", additionalParams: [
             "id": albumId,
-            "width": "120",
-            "height": "120"
+            "width": "300",
+            "height": "300"
         ]) else {
             return nil
         }

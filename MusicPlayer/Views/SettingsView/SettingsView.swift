@@ -11,9 +11,10 @@ struct SettingsView: View {
     var body: some View {
         List {
             connectionsSection()
+            clearCacheSection()
         }
-            .listStyle(InsetGroupedListStyle())
-        }
+        .listStyle(InsetGroupedListStyle())
+    }
     
     private func connectionsSection() -> some View {
         NavigationLink(destination: ConnectionsView()) {
@@ -22,5 +23,20 @@ struct SettingsView: View {
                 .padding(.vertical, 8)
         }
     }
+    
+    private func clearCacheSection() -> some View {
+        Button(action: {
+            clearCache()
+        }) {
+            Text("Clear Cache")
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 8)
+        }
+    }
+    
+    private func clearCache() {
+        ImageCache.shared.clearCache()
+        print("Cache cleared")
+    }
+    
 }
-

@@ -12,13 +12,6 @@ struct MainView: View {
     @StateObject private var musicViewModel = MusicViewModel()
     @State private var isScrolling = false
     @State private var showAlbumView = false
-    let albumImages = Array(repeating: "test_album", count: 10)
-    
-    let songs = [
-        (title: "Song 1", artist: "Artist 1"),
-        (title: "Song 2", artist: "Artist 2"),
-        (title: "Song 3", artist: "Artist 3")
-    ]
     
     var body: some View {
             ScrollView(showsIndicators: false) {
@@ -48,7 +41,7 @@ struct MainView: View {
                         items: musicViewModel.randomAlbums
                     )
                     Spacer()
-                        .frame(height: 80) // Adjust the height as needed
+                        .frame(height: 80)
                 }
                 .padding(.vertical)
             }
@@ -97,7 +90,6 @@ struct MainView: View {
                         .simultaneousGesture(
                             TapGesture(count: 1)
                                 .onEnded { _ in
-                                    // Handle tap if needed
                                 }
                         )
                     }

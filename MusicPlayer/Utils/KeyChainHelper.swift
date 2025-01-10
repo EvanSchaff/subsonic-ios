@@ -26,7 +26,7 @@ class KeychainHelper {
         // Add the new items
         let status = SecItemAdd(query, nil)
         guard status == errSecSuccess else {
-            print("Error saving to Keychain: \(status)")
+            print("Error saving to Keychain")
             return
         }
     }
