@@ -67,7 +67,6 @@ class SubsonicClient {
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
             let response = try JSONDecoder().decode([String: SubSonicAlbumResponse].self, from: data)
-            
             if let albumListResponse = response["subsonic-response"]?.albumList2.album {
                 let albumList = albumListResponse.map { Album(from: .subSonicAlbum($0)) }
                 return albumList
@@ -160,6 +159,9 @@ class SubsonicClient {
         
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("Raw response: \(jsonString)")
+            }
             let response = try JSONDecoder().decode([String: SubSonicSongResponse].self, from: data)
             if let songListResponse = response["subsonic-response"]?.album.song {
                 let songs = songListResponse.map { Song(from: .subSonicSong($0)) }
@@ -168,6 +170,7 @@ class SubsonicClient {
                 return []
             }
         } catch {
+            print("Decoding failed: \(error)")
             throw SubsonicError.fetchingDataFailed
         }
     }

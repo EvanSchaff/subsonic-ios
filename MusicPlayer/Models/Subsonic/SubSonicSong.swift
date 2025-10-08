@@ -44,8 +44,8 @@ struct SubSonicSong: Codable {
 }
 
 struct SubSonicReplayGain: Codable {
-    let trackPeak: Double
-    let albumPeak: Double
+    let trackPeak: Double?
+    let albumPeak: Double?
 }
 
 struct SubSonicGenre: Codable {
@@ -53,11 +53,11 @@ struct SubSonicGenre: Codable {
 }
 
 struct SubSonicSongResponse: Codable {
-    let status: String
-    let version: String
-    let type: String
-    let serverVersion: String
-    let openSubsonic: Bool
+    let status: String?
+    let version: String?
+    let type: String?
+    let serverVersion: String?
+    let openSubsonic: Bool?
     let album: SubSonicSongAlbum
 }
 
